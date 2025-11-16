@@ -1,0 +1,582 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cronómetro Compacto</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+            background: transparent;
+            overflow: hidden;
+        }
+
+        .timer-widget {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(15, 23, 42, 0.95);
+            border-radius: 20px;
+            padding: 20px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+            border: 2px solid rgba(59, 130, 246, 0.3);
+            backdrop-filter: blur(10px);
+            z-index: 9999;
+            transition: all 0.3s;
+            min-width: 280px;
+        }
+
+        .timer-widget.warning {
+            border-color: rgba(234, 179, 8, 0.6);
+            background: rgba(120, 53, 15, 0.95);
+        }
+
+        .timer-widget.danger {
+            border-color: rgba(239, 68, 68, 0.6);
+            background: rgba(127, 29, 29, 0.95);
+            animation: shake 0.5s infinite;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+        }
+
+        .logo {
+            width: 60px;
+            height: 60px;
+            margin: 0 auto 15px;
+            background-image: url('https://static.challengeplace.com/2023/8/7/1/competitor/1747c74d-3491-4f01-b3b3-31652ff6a27d.jpg');
+            background-size: contain;
+            background-position: center;
+            background-repeat: no-repeat;
+            border-radius: 10px;
+            opacity: 0.8;
+        }
+
+        .timer-display {
+            font-size: 3.5em;
+            font-weight: bold;
+            text-align: center;
+            color: #10b981;
+            margin-bottom: 10px;
+            letter-spacing: 3px;
+            text-shadow: 0 0 20px rgba(16, 185, 129, 0.5);
+        }
+
+        .timer-display.warning {
+            color: #eab308;
+            text-shadow: 0 0 20px rgba(234, 179, 8, 0.5);
+        }
+
+        .timer-display.danger {
+            color: #ef4444;
+            text-shadow: 0 0 20px rgba(239, 68, 68, 0.5);
+            animation: pulse 1s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.6; }
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+            overflow: hidden;
+            margin-bottom: 15px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: #3b82f6;
+            transition: width 1s linear, background 0.3s;
+        }
+
+        .progress-fill.warning {
+            background: #eab308;
+        }
+
+        .progress-fill.danger {
+            background: #ef4444;
+        }
+
+        .status-text {
+            text-align: center;
+            color: #94a3b8;
+            font-size: 0.9em;
+            margin-bottom: 15px;
+        }
+
+        .warning-text {
+            text-align: center;
+            color: #ef4444;
+            font-weight: bold;
+            font-size: 1em;
+            margin-bottom: 10px;
+            animation: pulse 1s infinite;
+        }
+
+        .controls {
+            display: flex;
+            gap: 8px;
+            justify-content: center;
+        }
+
+        button {
+            padding: 10px 15px;
+            font-size: 0.9em;
+            font-weight: bold;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            flex: 1;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+        }
+
+        button:active {
+            transform: scale(0.95);
+        }
+
+        .btn-green {
+            background: #16a34a;
+            color: white;
+        }
+
+        .btn-yellow {
+            background: #ca8a04;
+            color: white;
+        }
+
+        .btn-gray {
+            background: #4b5563;
+            color: white;
+        }
+
+        .btn-blue {
+            background: #3b82f6;
+            color: white;
+        }
+
+        .settings-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 10000;
+        }
+
+        .settings-modal.active {
+            display: flex;
+        }
+
+        .settings-panel {
+            background: rgba(31, 41, 55, 0.98);
+            border-radius: 20px;
+            padding: 30px;
+            max-width: 400px;
+            width: 90%;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.7);
+            border: 2px solid rgba(59, 130, 246, 0.3);
+        }
+
+        h2 {
+            color: white;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            color: #d1d5db;
+            margin-bottom: 8px;
+        }
+
+        select {
+            width: 100%;
+            padding: 12px;
+            background: #374151;
+            color: white;
+            border: 1px solid #4b5563;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1em;
+        }
+
+        .modal-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .draggable {
+            cursor: move;
+        }
+
+        .position-selector {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .position-btn {
+            flex: 1;
+            padding: 10px;
+            background: #374151;
+            color: white;
+            border: 2px solid #4b5563;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.9em;
+        }
+
+        .position-btn.active {
+            background: #3b82f6;
+            border-color: #3b82f6;
+        }
+    </style>
+</head>
+<body>
+    <div id="timerWidget" class="timer-widget draggable">
+        <div class="logo"></div>
+        <div id="timerDisplay" class="timer-display">5:00</div>
+        
+        <div class="progress-bar">
+            <div id="progressFill" class="progress-fill" style="width: 100%;"></div>
+        </div>
+        
+        <div id="statusText" class="status-text">Listo para iniciar</div>
+        <div id="warningText" class="warning-text" style="display: none;">⚠️ ¡POCO TIEMPO!</div>
+        
+        <div class="controls">
+            <button id="playPauseBtn" class="btn-green" onclick="togglePlayPause()">▶</button>
+            <button class="btn-gray" onclick="resetTimer()">↻</button>
+            <button class="btn-blue" onclick="openSettings()">⚙</button>
+        </div>
+    </div>
+
+    <div id="settingsModal" class="settings-modal">
+        <div class="settings-panel">
+            <h2>⚙️ Configuración</h2>
+            
+            <div class="form-group">
+                <label>Posición del cronómetro</label>
+                <div class="position-selector">
+                    <button class="position-btn" onclick="setPosition('top-left')">↖️ Arriba Izq</button>
+                    <button class="position-btn active" onclick="setPosition('top-right')">↗️ Arriba Der</button>
+                </div>
+                <div class="position-selector">
+                    <button class="position-btn" onclick="setPosition('bottom-left')">↙️ Abajo Izq</button>
+                    <button class="position-btn" onclick="setPosition('bottom-right')">↘️ Abajo Der</button>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>Duración de la presentación</label>
+                <select id="totalTime">
+                    <option value="60">1 minuto</option>
+                    <option value="120">2 minutos</option>
+                    <option value="180">3 minutos</option>
+                    <option value="300" selected>5 minutos</option>
+                    <option value="420">7 minutos</option>
+                    <option value="600">10 minutos</option>
+                    <option value="900">15 minutos</option>
+                    <option value="1200">20 minutos</option>
+                    <option value="1800">30 minutos</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label>Advertencia cuando queden</label>
+                <select id="warningTime">
+                    <option value="30">30 segundos</option>
+                    <option value="60" selected>1 minuto</option>
+                    <option value="90">1:30 minutos</option>
+                    <option value="120">2 minutos</option>
+                    <option value="180">3 minutos</option>
+                </select>
+            </div>
+
+            <div class="modal-buttons">
+                <button class="btn-green" onclick="applySettings()">✓ Aplicar</button>
+                <button class="btn-gray" onclick="closeSettings()">✕ Cerrar</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let totalTime = 300;
+        let timeLeft = 300;
+        let warningTime = 60;
+        let isRunning = false;
+        let interval = null;
+        let currentPosition = 'top-right';
+
+        // Hacer el widget arrastrable
+        let isDragging = false;
+        let currentX;
+        let currentY;
+        let initialX;
+        let initialY;
+        let xOffset = 0;
+        let yOffset = 0;
+
+        const widget = document.getElementById('timerWidget');
+
+        widget.addEventListener('mousedown', dragStart);
+        document.addEventListener('mousemove', drag);
+        document.addEventListener('mouseup', dragEnd);
+
+        function dragStart(e) {
+            if (e.target.tagName === 'BUTTON') return;
+            initialX = e.clientX - xOffset;
+            initialY = e.clientY - yOffset;
+            isDragging = true;
+        }
+
+        function drag(e) {
+            if (isDragging) {
+                e.preventDefault();
+                currentX = e.clientX - initialX;
+                currentY = e.clientY - initialY;
+                xOffset = currentX;
+                yOffset = currentY;
+                setTranslate(currentX, currentY, widget);
+            }
+        }
+
+        function dragEnd(e) {
+            initialX = currentX;
+            initialY = currentY;
+            isDragging = false;
+        }
+
+        function setTranslate(xPos, yPos, el) {
+            el.style.transform = `translate3d(${xPos}px, ${yPos}px, 0)`;
+        }
+
+        function formatTime(seconds) {
+            const mins = Math.floor(seconds / 60);
+            const secs = seconds % 60;
+            return mins + ':' + (secs < 10 ? '0' : '') + secs;
+        }
+
+        function updateDisplay() {
+            const display = document.getElementById('timerDisplay');
+            const progressFill = document.getElementById('progressFill');
+            const warningText = document.getElementById('warningText');
+            const statusText = document.getElementById('statusText');
+            const widget = document.getElementById('timerWidget');
+
+            display.textContent = formatTime(timeLeft);
+
+            const percentage = (timeLeft / totalTime) * 100;
+            progressFill.style.width = percentage + '%';
+
+            // Remover clases anteriores
+            display.classList.remove('warning', 'danger');
+            progressFill.classList.remove('warning', 'danger');
+            widget.classList.remove('warning', 'danger');
+
+            if (percentage > 33) {
+                statusText.textContent = 'Tiempo suficiente';
+            } else if (percentage > 16) {
+                display.classList.add('warning');
+                progressFill.classList.add('warning');
+                widget.classList.add('warning');
+                statusText.textContent = '¡Atención al tiempo!';
+            } else {
+                display.classList.add('danger');
+                progressFill.classList.add('danger');
+                widget.classList.add('danger');
+                statusText.textContent = '¡Termina ya!';
+            }
+
+            if (timeLeft <= warningTime && timeLeft > 0) {
+                warningText.style.display = 'block';
+                display.classList.add('danger');
+                progressFill.classList.add('danger');
+                widget.classList.add('danger');
+            } else {
+                warningText.style.display = 'none';
+            }
+
+            if (timeLeft === 0) {
+                statusText.textContent = '⏰ ¡TIEMPO TERMINADO!';
+                statusText.style.color = '#ef4444';
+                statusText.style.fontWeight = 'bold';
+            }
+        }
+
+        function playSound() {
+            try {
+                const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                
+                const beep = (freq, delay) => {
+                    setTimeout(() => {
+                        const osc = audioContext.createOscillator();
+                        const gain = audioContext.createGain();
+                        
+                        osc.connect(gain);
+                        gain.connect(audioContext.destination);
+                        
+                        osc.frequency.value = freq;
+                        osc.type = 'square';
+                        
+                        gain.gain.setValueAtTime(0.3, audioContext.currentTime);
+                        gain.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.2);
+                        
+                        osc.start(audioContext.currentTime);
+                        osc.stop(audioContext.currentTime + 0.2);
+                    }, delay);
+                };
+                
+                beep(1000, 0);
+                beep(1200, 200);
+                if (timeLeft === 0) {
+                    beep(1400, 400);
+                }
+            } catch (error) {
+                console.log('Sonido no disponible');
+            }
+        }
+
+        function tick() {
+            timeLeft--;
+            
+            if (timeLeft === warningTime) {
+                playSound();
+            }
+            
+            if (timeLeft <= 0) {
+                timeLeft = 0;
+                playSound();
+                pause();
+            }
+            
+            updateDisplay();
+        }
+
+        function play() {
+            if (!isRunning && timeLeft > 0) {
+                isRunning = true;
+                interval = setInterval(tick, 1000);
+                document.getElementById('playPauseBtn').innerHTML = '⏸';
+                document.getElementById('playPauseBtn').className = 'btn-yellow';
+                document.getElementById('statusText').textContent = 'En progreso...';
+            }
+        }
+
+        function pause() {
+            isRunning = false;
+            clearInterval(interval);
+            document.getElementById('playPauseBtn').innerHTML = '▶';
+            document.getElementById('playPauseBtn').className = 'btn-green';
+            if (timeLeft > 0) {
+                document.getElementById('statusText').textContent = 'Pausado';
+            }
+        }
+
+        function togglePlayPause() {
+            if (isRunning) {
+                pause();
+            } else {
+                play();
+            }
+        }
+
+        function resetTimer() {
+            pause();
+            timeLeft = totalTime;
+            document.getElementById('statusText').textContent = 'Reiniciado';
+            document.getElementById('statusText').style.color = '#94a3b8';
+            document.getElementById('statusText').style.fontWeight = 'normal';
+            updateDisplay();
+        }
+
+        function openSettings() {
+            pause();
+            document.getElementById('settingsModal').classList.add('active');
+        }
+
+        function closeSettings() {
+            document.getElementById('settingsModal').classList.remove('active');
+        }
+
+        function applySettings() {
+            totalTime = parseInt(document.getElementById('totalTime').value);
+            warningTime = parseInt(document.getElementById('warningTime').value);
+            timeLeft = totalTime;
+            updateDisplay();
+            closeSettings();
+        }
+
+        function setPosition(position) {
+            currentPosition = position;
+            const widget = document.getElementById('timerWidget');
+            
+            // Remover transform para resetear posición
+            widget.style.transform = 'none';
+            xOffset = 0;
+            yOffset = 0;
+            
+            // Resetear todas las posiciones
+            widget.style.top = 'auto';
+            widget.style.bottom = 'auto';
+            widget.style.left = 'auto';
+            widget.style.right = 'auto';
+            
+            // Aplicar nueva posición
+            switch(position) {
+                case 'top-left':
+                    widget.style.top = '20px';
+                    widget.style.left = '20px';
+                    break;
+                case 'top-right':
+                    widget.style.top = '20px';
+                    widget.style.right = '20px';
+                    break;
+                case 'bottom-left':
+                    widget.style.bottom = '20px';
+                    widget.style.left = '20px';
+                    break;
+                case 'bottom-right':
+                    widget.style.bottom = '20px';
+                    widget.style.right = '20px';
+                    break;
+            }
+            
+            // Actualizar botones activos
+            document.querySelectorAll('.position-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+        }
+
+        // Inicializar
+        updateDisplay();
+    </script>
+</body>
+</html>
